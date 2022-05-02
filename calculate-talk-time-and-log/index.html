@@ -11,11 +11,30 @@
     var SignalWireRoomToken = "";
     const participants = [];
 
-    function logTalking(params) {
-        const action = params.member.talking ? "Started talking" : "Stopped talking";
-        const participantID = participants.findIndex((m) => m.id === params.member.id);
-        console.log(participants[participantID].name, ' ', action, ' at ', Date.now())
+    function logEvents(text){
+      console.log(text);
+      document.getElementById("event-box").innerHTML = text;
     }
+
+    function logTalking(params) {
+        const talking = params.member.talking;
+        const participantID = participants.findIndex((m) => m.id === params.member.id);
+        const memberName = participants[participantID].name
+
+        if(talking) {
+          participants[participantID].start_time = new Date();
+          participants[participantID].total_time = 0;
+          var text = memberName + ' started talking at ' + Date.now()
+          logEvents(text);
+        }else {
+          participants[participantID].total_time += new Date() - participants[participantID].start_time;
+          participants[participantID].start_time = 0;
+          
+          var text = memberName + ' has stopped talking and has talked for a total of ' + participants[participantID].total_time;
+          logEvents(text)
+        }  
+    }
+
 
     function createParticipantList(params) {
       params.room.members.forEach((member) =>
