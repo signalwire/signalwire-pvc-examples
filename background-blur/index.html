@@ -1,0 +1,93 @@
+<html>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+  <script>
+    var newVideo;
+    var stream;
+    var localVideo;
+
+    // Sample written by Bryan Rite and Andre Martin
+    // Mostly boilerplate to load the Google Mediapipe Selfie Segmentation model.
+    function loadIt() {
+      var videoElement = document.querySelector("ready-room").shadowRoot.querySelector("video");
+      var canvasElement = document.getElementsByClassName('output_canvas')[0];
+      localVideo = document.querySelector("ready-room").shadowRoot.querySelector(".mcuLayers video");
+
+      const canvasCtx = canvasElement.getContext('2d');
+      const selfieSegmentation = new SelfieSegmentation({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+      }});
+      selfieSegmentation.setOptions({
+        modelSelection: 1,
+      });
+      selfieSegmentation.onResults(function(results) {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        canvasCtx.globalCompositeOperation = "copy";
+        canvasCtx.filter = "none";
+        canvasCtx.filter = "blur(8px)"; // Smooth out the border between the user/background
+        canvasCtx.drawImage(results.segmentationMask, 0, 0, canvasElement.width, canvasElement.height);
+
+        canvasCtx.globalCompositeOperation = "source-in";
+        canvasCtx.filter = "none";
+        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        canvasCtx.globalCompositeOperation = "destination-over";
+        canvasCtx.filter = "blur(8px)"; // Actual background blur
+        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        canvasCtx.restore();
+     });
+
+      async function detectionFrame(now, metadata) {
+        await selfieSegmentation.send({ image: localVideo });
+        localVideo.requestVideoFrameCallback(detectionFrame);
+      }
+      localVideo.requestVideoFrameCallback(detectionFrame);
+
+      stream = canvasElement.captureStream(20);
+      newVideo = document.createElement("video");
+    };
+
+    // Take the locally rendered segmented video and replace the media stream.
+    async function startIt() {
+      newVideo.srcObject = stream;
+      newVideo.play().then(() => {
+        const video_stream = newVideo.captureStream(20);
+        const track = video_stream.getVideoTracks()[0];
+        window._room.peer.instance.getSenders()[1].replaceTrack(track);
+        // Have to hide localVideo for now, until SDK gives more access to tracks.
+        localVideo.style.visibility = "hidden";
+      }).catch(console.error);
+    }
+  </script>
+  <body>
+    <div style="width:70%;float:left;">
+      <!-- SignalWire Video Room -->
+      <script>
+        !function(e,r){e.swvr=e.swvr||function(r={}){
+        Object.assign(e.swvr.p=e.swvr.p||{},r)}
+        ;let t=r.currentScript,n=r.createElement("script")
+        ;n.type="module",n.src="https://cdn.signalwire.com/video/rooms/index.js",
+        n.onload=function(){let n=r.createElement("ready-room")
+        ;n.params=e.swvr.p,t.parentNode.appendChild(n)},t.parentNode.insertBefore(n,t)
+        ;let i=r.createElement("link")
+        ;i.type="text/css",i.rel="stylesheet",i.href="https://cdn.signalwire.com/video/rooms/signalwire.css",
+        t.parentNode.insertBefore(i,t),
+        e.SignalWire=e.SignalWire||{},e.SignalWire.Prebuilt={VideoRoom:e.swvr}
+        }(window,document);
+
+        SignalWire.Prebuilt.VideoRoom({
+          token: 'YOUR_TOKEN'
+        });
+      </script>
+      <!-- End SignalWire Video Room -->
+    </div>
+    <div style="width:30%;float:right;text-align:center">
+      <button style="font-size: 1.5em;" onclick="loadIt();">Start It</button>
+      <canvas class="output_canvas" width="1280" height="720" style="width:80%;display:block;margin:20px auto;border:1px solid #ccc;"></canvas>
+      <button style="font-size: 1.5em;" onclick="startIt();">Stream It</button>
+  </body>
+</html>
+

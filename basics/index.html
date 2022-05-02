@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>SignalWire Prebuilt Video Conference</title>
+  </head>
+
+<script>
+    var SignalWireRoomToken = "";
+
+    function joinRoom() {
+      var userName = document.getElementById("username").value;
+      var video = document.getElementById("video-root");
+      video.style.display = "block";
+      video.style.visibility = "visible";
+
+      document.getElementById("set-username").style.display = "none";
+
+      var s = document.createElement("script");
+      s.type = "text/javascript";
+      var code = `
+        !(function (e, r) {
+          e.swvr =
+            e.swvr ||
+            function (r = {}) {
+              Object.assign((e.swvr.p = e.swvr.p || {}), r);
+            };
+          let t = r.currentScript,
+            n = r.createElement("script");
+          (n.type = "module"),
+            (n.src = "https://cdn.signalwire.com/video/rooms/index.js"),
+            (n.onload = function () {
+              let n = r.createElement("ready-room");
+              (n.params = e.swvr.p), t.parentNode.appendChild(n);
+            }),
+            t.parentNode.insertBefore(n, t);
+          let i = r.createElement("link");
+          (i.type = "text/css"),
+            (i.rel = "stylesheet"),
+            (i.href = "https://cdn.signalwire.com/video/rooms/signalwire.css"),
+            t.parentNode.insertBefore(i, t),
+            (e.SignalWire = e.SignalWire || {}),
+            (e.SignalWire.Prebuilt = { VideoRoom: e.swvr });
+        })(window, document);
+
+        SignalWire.Prebuilt.VideoRoom({
+          token: "${SignalWireRoomToken}",
+          userName: "${userName}",
+          setupRoomSession: (roomSession) => {
+         
+            function logEvents(event, params){
+              console.log(event, params);
+              document.getElementById("event-name").innerHTML = event;
+              document.getElementById("event-box").innerHTML = JSON.stringify(params, null, 4);
+            }
+
+            logEvents('Room Session', roomSession);
+
+            roomSession.on("layout.changed", (params) => {
+              logEvents("Layout Changed", params);
+            });
+            roomSession.on("member.updated", (params) => {
+              logEvents("Member Updated", params);
+            });
+            roomSession.on("member.joined", (params) => {
+              logEvents("Member Joined", params);
+            });
+            roomSession.on("member.left", (params) => {
+              logEvents("Member Left", params);
+            });
+            roomSession.on("member.talking", (params) => {
+              logEvents("Member Talking", params);
+            });
+            roomSession.on("room.joined", (params) => {
+              logEvents("Room Joined", params);
+            });
+            roomSession.on("room.updated", (params) => {
+              logEvents("Room Updated", params);
+            });
+          }
+        });
+      `;
+
+      try {
+        s.appendChild(document.createTextNode(code));
+        video.appendChild(s);
+      } catch (e) {
+        console.error(`ERROR ${e}`);
+        document.body.appendChild(s);
+      }
+    }
+  </script>
+
+  <body>
+
+    <div id="set-username">
+      <input type="text" id="username" value="Username" />
+      <button onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <div
+      id="video-root"
+      style="
+        margin: 0 auto;
+        width: 60%;
+        border-color: royalblue;
+        border-width: 10px;
+        border-style: solid;
+        display: none;
+        visibility: hidden;
+      "
+    ></div>
+
+    <div>
+        <h2 id="event-name"><h2>
+        <pre>
+          <code id="event-box">
+          </code>
+        </pre>
+    </div>
+    
+  </body>
+</html>
